@@ -586,7 +586,10 @@
         const data = snapshot.val();
         if (data) {
             if (data.press && Array.isArray(data.press)) {
-                window.pressGridData = data.press;
+                window.pressGridData = data.press.map((p, i) => ({
+                    ...p,
+                    durationSec: window.pressGridData[i]?.durationSec ?? 0
+                }));
                 window.create5x5Grid();
             }
             if (data.env && Array.isArray(data.env)) {
@@ -706,7 +709,9 @@
         if(timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             if(window.pressGridData) {
-                window.pressGridData.forEach(p => p.durationSec++);
+                window.pressGridData.forEach(p => {
+                    p.durationSec = p.score > 0 ? (p.durationSec || 0) + 1 : 0;
+                });
             }
             window.checkAlertThresholds();
         }, 1000);
