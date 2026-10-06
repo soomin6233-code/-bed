@@ -169,10 +169,11 @@
         .grid-slider { display: flex; width: 200%; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
         .grid-page { width: 50%; box-sizing: border-box; }
 
-        .grid-container-5x5 { 
+        /* 4x4 그리드로 수정 */
+        .grid-container-4x4 { 
             display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 6px; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 8px; 
             width: 100%; 
             aspect-ratio: 1/1; 
             background-color: #f8fdfa; 
@@ -378,7 +379,7 @@
 
             <div class="switch-container">
                 <div class="switch-btn active-press" id="sw-press" onclick="window.switchGridMode('press')">
-                    <i class="fa-solid fa-gauge-high"></i> 체압 분포 (5x5)
+                    <i class="fa-solid fa-gauge-high"></i> 체압 분포 (4x4)
                 </div>
                 <div class="switch-btn" id="sw-env" onclick="window.switchGridMode('env')">
                     <i class="fa-solid fa-temperature-half"></i> 온·습도 (2x2)
@@ -395,7 +396,7 @@
 
             <div class="grid-viewport">
                 <div class="grid-slider" id="grid-slider">
-                    <div class="grid-page"><div class="grid-container-5x5" id="grid-5x5"></div></div>
+                    <div class="grid-page"><div class="grid-container-4x4" id="grid-4x4"></div></div>
                     <div class="grid-page"><div class="grid-container-2x2" id="grid-2x2"></div></div>
                 </div>
             </div>
@@ -426,7 +427,7 @@
             <div class="info-card">
                 <h3 style="margin-top:0; font-size: 15px; margin-bottom: 12px; color:#166534;"><i class="fa-solid fa-circle-info" style="margin-right:5px;"></i>앱 정보</h3>
                 <div class="info-row"><span class="info-label">개발자</span><span class="info-value">Team ATLAS</span></div>
-                <div class="info-row"><span class="info-label">버전</span><span class="info-value">1.0.0 (Prototype 5x5)</span></div>
+                <div class="info-row"><span class="info-label">버전</span><span class="info-value">1.0.0 (Prototype 4x4)</span></div>
             </div>
         </div>
     </div>
@@ -480,13 +481,13 @@
             <div style="font-size:12px; color:#64748b; margin-bottom:8px;" id="snap-time">기록 일시</div>
             
             <div class="switch-container" style="margin-bottom:8px;">
-                <div class="switch-btn active-press" id="snap-sw-press" onclick="window.switchSnapGridMode('press')">체압 (5x5)</div>
+                <div class="switch-btn active-press" id="snap-sw-press" onclick="window.switchSnapGridMode('press')">체압 (4x4)</div>
                 <div class="switch-btn" id="snap-sw-env" onclick="window.switchSnapGridMode('env')">온습도 (2x2)</div>
             </div>
 
             <div class="grid-viewport" style="margin:5px 0;">
                 <div class="grid-slider" id="snap-grid-slider">
-                    <div class="grid-page"><div class="grid-container-5x5" id="snap-grid-5x5"></div></div>
+                    <div class="grid-page"><div class="grid-container-4x4" id="snap-grid-4x4"></div></div>
                     <div class="grid-page"><div class="grid-container-2x2" id="snap-grid-2x2"></div></div>
                 </div>
             </div>
@@ -593,8 +594,8 @@
     let tempBradenResult = {};
     let pressCellIndex = null;
 
-    // 센서 데이터 기본 배열 초기화
-    window.pressGridData = Array(25).fill(0).map((_, i) => ({ id: i, score: 0, pressure: "0.0", durationSec: 0 }));
+    // 센서 데이터 기본 배열 초기화 (4x4 = 16개)
+    window.pressGridData = Array(16).fill(0).map((_, i) => ({ id: i, score: 0, pressure: "0.0", durationSec: 0 }));
     window.envGridData = Array(4).fill(0).map((_, i) => ({ id: i, temp: "0.0", humi: 0 }));
 
     // Firebase 실시간 동기화
@@ -603,13 +604,15 @@
         if (data) {
             if (data.press && Array.isArray(data.press)) {
                 data.press.forEach((p, i) => {
-                    const currentDuration = window.pressGridData[i] ? window.pressGridData[i].durationSec : 0;
-                    window.pressGridData[i] = {
-                        ...p,
-                        durationSec: currentDuration
-                    };
+                    if (i < 16) {
+                        const currentDuration = window.pressGridData[i] ? window.pressGridData[i].durationSec : 0;
+                        window.pressGridData[i] = {
+                            ...p,
+                            durationSec: currentDuration
+                        };
+                    }
                 });
-                window.create5x5Grid();
+                window.create4x4Grid();
             }
             if (data.env && Array.isArray(data.env)) {
                 window.envGridData = data.env;
@@ -707,7 +710,7 @@
         document.getElementById('mon-pat-loc').innerText = mat.patLoc;
         document.getElementById('mon-risk-badge-container').innerHTML = window.getModernBadgeHTML(mat.score, mat.riskText);
 
-        window.create5x5Grid();
+        window.create4x4Grid();
         window.create2x2Grid();
         window.renderRecordHistory();
         window.changeScreen('screen-monitor');
@@ -839,17 +842,18 @@
         return { color: '#212121', status: '위험 Level 5' };
     };
 
-    window.create5x5Grid = function() {
-        const grid = document.getElementById('grid-5x5'); if (!grid) return;
+    // 4x4 체압 그리드 생성 함수
+    window.create4x4Grid = function() {
+        const grid = document.getElementById('grid-4x4'); if (!grid) return;
         grid.innerHTML = ""; pressCellIndex = null;
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 16; i++) {
             const cell = document.createElement('div'); cell.className = 'grid-cell';
             const item = window.pressGridData[i] || { score: 0 };
             const info = window.getColorInfo(item.score); 
             cell.style.backgroundColor = info.color;
             cell.onclick = function() {
                 if (pressCellIndex === i) { window.openPressModal(i); }
-                else { document.querySelectorAll('#grid-5x5 .grid-cell').forEach(c => c.classList.remove('selected')); cell.classList.add('selected'); pressCellIndex = i; }
+                else { document.querySelectorAll('#grid-4x4 .grid-cell').forEach(c => c.classList.remove('selected')); cell.classList.add('selected'); pressCellIndex = i; }
             };
             grid.appendChild(cell);
         }
@@ -886,7 +890,8 @@
     window.openPressModal = function(index) {
         const data = window.pressGridData[index] || { score:0, pressure:0, durationSec:0 };
         const info = window.getColorInfo(data.score);
-        const row = Math.floor(index / 5) + 1, col = (index % 5) + 1;
+        // 4x4 모드에 맞게 행, 열 계산
+        const row = Math.floor(index / 4) + 1, col = (index % 4) + 1;
         document.getElementById('modal-title').innerText = `체압 센서 (행 ${row}, 열 ${col})`;
         document.getElementById('modal-body-content').innerHTML = `
             <div class="info-row"><span class="info-label">압력 점수:</span><span class="info-value">${data.score}점</span></div>
@@ -899,7 +904,7 @@
     window.saveCurrentStateRecord = function() {
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${now.toLocaleTimeString()}`;
-        const avgPressure = (window.pressGridData.reduce((acc, p) => acc + parseFloat(p.pressure || 0), 0) / 25).toFixed(1);
+        const avgPressure = (window.pressGridData.reduce((acc, p) => acc + parseFloat(p.pressure || 0), 0) / 16).toFixed(1);
         const avgTemp = (window.envGridData.reduce((acc, e) => acc + parseFloat(e.temp || 0), 0) / 4).toFixed(1);
         const avgHumi = Math.round(window.envGridData.reduce((acc, e) => acc + (e.humi || 0), 0) / 4);
 
@@ -945,11 +950,11 @@
         document.getElementById('snap-title').innerText = "기록 당시 매트리스 스냅샷";
         document.getElementById('snap-time').innerText = `저장 일시: ${rec.timeStr}`;
 
-        const g5 = document.getElementById('snap-grid-5x5'); g5.innerHTML = "";
+        const g4 = document.getElementById('snap-grid-4x4'); g4.innerHTML = "";
         rec.pressSnap.forEach(p => {
             const cell = document.createElement('div'); cell.className = 'grid-cell';
             cell.style.backgroundColor = window.getColorInfo(p.score).color;
-            g5.appendChild(cell);
+            g4.appendChild(cell);
         });
 
         const g2 = document.getElementById('snap-grid-2x2'); g2.innerHTML = "";
@@ -1071,10 +1076,10 @@
         window.closeModal('confirm-modal');
         if (saveFirst) { window.saveCurrentStateRecord(); }
 
-        window.pressGridData = Array(25).fill(0).map((_, i) => ({ id: i, score: 0, pressure: "0.0", durationSec: 0 }));
+        window.pressGridData = Array(16).fill(0).map((_, i) => ({ id: i, score: 0, pressure: "0.0", durationSec: 0 }));
         window.envGridData = Array(4).fill(0).map((_, i) => ({ id: i, temp: "0.0", humi: 0 }));
 
-        window.create5x5Grid(); 
+        window.create4x4Grid(); 
         window.create2x2Grid();
         alert("모든 센서 값 및 유지시간이 0으로 초기화되었습니다.");
     };
